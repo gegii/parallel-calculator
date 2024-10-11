@@ -5,8 +5,9 @@ A NestJS application that evaluates mathematical expressions using a worker thre
 ## Table of Contents
 
 - [Features](#features)
-- [Installation & Usage](#installation)
-- [How It Works](#howitworks)
+- [Installation & Usage](#installation--usage)
+- [How It Works](#how-it-works)
+- [Example](#example)
 - [Testing](#testing)
 
 ## Features
@@ -45,11 +46,11 @@ Using cURL, you can execute the following command:
 
 ```bash
 curl -X POST http://localhost:3000/evaluate -H "Content-Type: application/json" -d '{"expression": "(1 - 1) * 2 + 3 * (1 - 3 + 4) + 10 / 2"}'
+```
 
 {
-  "result": 11
+"result": 11
 }
-```
 
 ## Testing
 
