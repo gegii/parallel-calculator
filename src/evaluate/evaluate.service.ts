@@ -132,11 +132,12 @@ export class EvaluateService {
             return this.performOperation(token, a, b);
           },
         );
+
         stack.push(resultPromise);
       }
     }
 
-    // Wait for all operations to finish
+    // Wait for all operations to finish and resolve results
     const results = await Promise.all(stack);
     return results[results.length - 1]; // The final result will be the last one
   }
