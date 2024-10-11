@@ -119,18 +119,14 @@ export class EvaluateService {
 
     for (const token of postfix) {
       if (/\d/.test(token)) {
-        // If the token is a number, push it onto the stack
         stack.push(Promise.resolve(parseFloat(token)));
       } else if (token in this.operators) {
-        // If the token is an operator, pop two operands and apply the operator
         const bPromise = stack.pop();
         const aPromise = stack.pop();
 
         // Create a new promise for the operation
-        const resultPromise = Promise.all([aPromise, bPromise]).then(
-          ([a, b]) => {
-            return this.performOperation(token, a, b);
-          },
+        const resultPromise = Promise.all([aPromise, bPromise]).then(([a, b]) =>
+          this.performOperation(token, a, b),
         );
 
         stack.push(resultPromise);
@@ -139,7 +135,7 @@ export class EvaluateService {
 
     // Wait for all operations to finish and resolve results
     const results = await Promise.all(stack);
-    return results[results.length - 1]; // The final result will be the last one
+    return results[results.length - 1]; // Return the final result
   }
 
   // Perform the operation and return a Promise
