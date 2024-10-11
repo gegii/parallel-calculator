@@ -10,7 +10,7 @@ export class EvaluateService {
     '/': { precedence: 2, associativity: 'L' },
   };
 
-  evaluate(expression: string): number {
+  async evaluate(expression: string): Promise<number> {
     // Validate the expression
     if (!CalculationHelpers.validateExpression(expression)) {
       throw new Error('Expression contains invalid characters');
@@ -27,8 +27,9 @@ export class EvaluateService {
     // Convert to postfix notation using the shunting-yard algorithm
     const postfix = this.infixToPostfix(tokens);
 
-    // Evaluate the postfix expression
-    return this.evaluatePostfix(postfix);
+    // Evaluate the postfix expression concurrently
+    const result = await this.evaluatePostfix(postfix);
+    return result;
   }
 
   // Tokenize the input expression
@@ -75,11 +76,7 @@ export class EvaluateService {
         while (
           operatorStack.length > 0 &&
           operatorStack[operatorStack.length - 1] !== '(' &&
-          CalculationHelpers.hasHigherPrecedence(
-            operatorStack[operatorStack.length - 1],
-            o1,
-            this.operators,
-          )
+          this.hasHigherPrecedence(operatorStack[operatorStack.length - 1], o1)
         ) {
           outputQueue.push(operatorStack.pop());
         }
@@ -107,36 +104,62 @@ export class EvaluateService {
     return outputQueue;
   }
 
-  // Evaluate the postfix expression
-  private evaluatePostfix(postfix: string[]): number {
-    const stack: number[] = [];
+  // Check operator precedence
+  private hasHigherPrecedence(op1: string, op2: string): boolean {
+    return (
+      this.operators[op1].precedence > this.operators[op2].precedence ||
+      (this.operators[op1].precedence === this.operators[op2].precedence &&
+        this.operators[op1].associativity === 'L')
+    );
+  }
+
+  // Evaluate the postfix expression concurrently
+  private async evaluatePostfix(postfix: string[]): Promise<number> {
+    const stack: Promise<number>[] = [];
 
     for (const token of postfix) {
       if (/\d/.test(token)) {
         // If the token is a number, push it onto the stack
-        stack.push(parseFloat(token));
+        stack.push(Promise.resolve(parseFloat(token)));
       } else if (token in this.operators) {
         // If the token is an operator, pop two operands and apply the operator
-        const b = stack.pop();
-        const a = stack.pop();
+        const bPromise = stack.pop();
+        const aPromise = stack.pop();
 
-        switch (token) {
-          case '+':
-            stack.push(a + b);
-            break;
-          case '-':
-            stack.push(a - b);
-            break;
-          case '*':
-            stack.push(a * b);
-            break;
-          case '/':
-            stack.push(a / b);
-            break;
-        }
+        // Create a new promise for the operation
+        const resultPromise = Promise.all([aPromise, bPromise]).then(
+          ([a, b]) => {
+            return this.performOperation(token, a, b);
+          },
+        );
+        stack.push(resultPromise);
       }
     }
 
-    return stack.pop(); // The final result should be the last item on the stack
+    // Wait for all operations to finish
+    const results = await Promise.all(stack);
+    return results[results.length - 1]; // The final result will be the last one
+  }
+
+  // Perform the operation and return a Promise
+  private performOperation(operator: string, a: number, b: number): number {
+    let result: number;
+    switch (operator) {
+      case '+':
+        result = a + b;
+        break;
+      case '-':
+        result = a - b;
+        break;
+      case '*':
+        result = a * b;
+        break;
+      case '/':
+        result = a / b;
+        break;
+      default:
+        throw new Error(`Unknown operator: ${operator}`);
+    }
+    return result;
   }
 }
