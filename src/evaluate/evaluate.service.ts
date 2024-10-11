@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { WorkerService } from './worker.service'; // Import WorkerService
 import { CalculationHelpers } from '../common/utils/calculation-helpers';
 
 @Injectable()
 export class EvaluateService {
+  constructor(private readonly workerService: WorkerService) {} // Inject WorkerService
+
   private operators = {
     '+': { precedence: 1, associativity: 'L' },
     '-': { precedence: 1, associativity: 'L' },
@@ -27,8 +30,8 @@ export class EvaluateService {
     // Convert to postfix notation using the shunting-yard algorithm
     const postfix = this.infixToPostfix(tokens);
 
-    // Evaluate the postfix expression concurrently
-    const result = await this.evaluatePostfix(postfix);
+    // Evaluate the postfix expression using the worker service
+    const result = await this.workerService.evaluatePostfix(postfix);
     return result;
   }
 
@@ -68,10 +71,8 @@ export class EvaluateService {
 
     for (const token of tokens) {
       if (/\d/.test(token)) {
-        // If the token is a number, add it to the output queue
         outputQueue.push(token);
       } else if (token in this.operators) {
-        // If the token is an operator
         const o1 = token;
         while (
           operatorStack.length > 0 &&
@@ -82,21 +83,18 @@ export class EvaluateService {
         }
         operatorStack.push(o1);
       } else if (token === '(') {
-        // If the token is a left parenthesis, push it to the stack
         operatorStack.push(token);
       } else if (token === ')') {
-        // If the token is a right parenthesis, pop to the output queue until the left parenthesis is found
         while (
           operatorStack.length > 0 &&
           operatorStack[operatorStack.length - 1] !== '('
         ) {
           outputQueue.push(operatorStack.pop());
         }
-        operatorStack.pop(); // Remove the left parenthesis
+        operatorStack.pop();
       }
     }
 
-    // Pop any remaining operators
     while (operatorStack.length > 0) {
       outputQueue.push(operatorStack.pop());
     }
@@ -104,59 +102,11 @@ export class EvaluateService {
     return outputQueue;
   }
 
-  // Check operator precedence
   private hasHigherPrecedence(op1: string, op2: string): boolean {
     return (
       this.operators[op1].precedence > this.operators[op2].precedence ||
       (this.operators[op1].precedence === this.operators[op2].precedence &&
         this.operators[op1].associativity === 'L')
     );
-  }
-
-  // Evaluate the postfix expression concurrently
-  private async evaluatePostfix(postfix: string[]): Promise<number> {
-    const stack: Promise<number>[] = [];
-
-    for (const token of postfix) {
-      if (/\d/.test(token)) {
-        stack.push(Promise.resolve(parseFloat(token)));
-      } else if (token in this.operators) {
-        const bPromise = stack.pop();
-        const aPromise = stack.pop();
-
-        // Create a new promise for the operation
-        const resultPromise = Promise.all([aPromise, bPromise]).then(([a, b]) =>
-          this.performOperation(token, a, b),
-        );
-
-        stack.push(resultPromise);
-      }
-    }
-
-    // Wait for all operations to finish and resolve results
-    const results = await Promise.all(stack);
-    return results[results.length - 1]; // Return the final result
-  }
-
-  // Perform the operation and return a Promise
-  private performOperation(operator: string, a: number, b: number): number {
-    let result: number;
-    switch (operator) {
-      case '+':
-        result = a + b;
-        break;
-      case '-':
-        result = a - b;
-        break;
-      case '*':
-        result = a * b;
-        break;
-      case '/':
-        result = a / b;
-        break;
-      default:
-        throw new Error(`Unknown operator: ${operator}`);
-    }
-    return result;
   }
 }
