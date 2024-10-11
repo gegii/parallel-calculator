@@ -14,8 +14,9 @@ A NestJS application that evaluates mathematical expressions using a worker thre
 
 - Evaluates simple and complex mathematical expressions.
 - Supports parentheses and operator precedence.
-- Utilizes worker threads to perform calculations in parallel.
-- Comprehensive unit tests for service logic.
+- Utilizes worker threads and promises to perform calculations in parallel.
+- Unit tests for service logic.
+- Error handling.
 
 ## Installation & Usage
 
