@@ -6,7 +6,12 @@ import { join } from 'path';
 export class WorkerService {
   evaluatePostfix(postfix: string[]): Promise<number> {
     return new Promise((resolve, reject) => {
-      const workerFilePath = join(process.cwd(), 'src/evaluate/worker.ts');
+      const workerFilePath = join(
+        process.cwd(),
+        'src',
+        'evaluate',
+        'worker.ts',
+      );
 
       const worker = new Worker(workerFilePath, {
         workerData: { postfix },
